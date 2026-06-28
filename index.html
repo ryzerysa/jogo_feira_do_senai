@@ -35,17 +35,11 @@
         canvas {
             image-rendering: pixelated;
             background-color: #111;
-        }
-        /* Ajustado para focar no preenchimento horizontal (aspect-ratio mantido) */
-        .menu-style {
-            width: 100vw;
-            height: 100vh;
-        }
-        .game-style {
+            /* Força o canvas a se ajustar mantendo a proporção de quadrado na tela horizontal */
             max-width: 100vw;
             max-height: 100vh;
             width: auto;
-            height: 100%;
+            height: 100vh;
             aspect-ratio: 1 / 1;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
@@ -74,7 +68,7 @@
 
 <div id="gameContainer">
     <input type="text" id="nomeInput" placeholder="DIGITE SEU NOME" maxlength="12">
-    <canvas id="gameCanvas" class="menu-style"></canvas>
+    <canvas id="gameCanvas"></canvas>
 </div>
 
 <script>
@@ -87,16 +81,14 @@ const GAME_HEIGHT = 384;
 
 let isMobile = false;
 
+// CORREÇÃO: O tamanho interno do canvas do jogo precisa ser sempre o tamanho lógico do jogo
 function initCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    canvas.width = GAME_WIDTH;
+    canvas.height = GAME_HEIGHT;
+    // Detecção mais robusta para habilitar os controles mobile
+    isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 900);
 }
-window.addEventListener('resize', () => {
-    if (gameState === "START_MENU" || gameState === "RANKING") {
-        initCanvas();
-    }
-});
+window.addEventListener('resize', initCanvas);
 initCanvas();
 
 // --- ESTADO DO JOGO ---
@@ -164,7 +156,7 @@ let ultimoTempoFrame = 0;
 const INTERVALO_FRAME = 100; 
 let olhandoParaEsquerda = false;
 
-// --- CONFIGURAÇÃO DOS BOTÕES MOBILE (Posicionados para tela na horizontal) ---
+// --- CONFIGURAÇÃO DOS BOTÕES MOBILE (Posicionados proporcionalmente dentro da tela interna de 384x384) ---
 const mobileControls = {
     esquerda: { x: 15, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false },
     direita: { x: 75, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false },
@@ -195,7 +187,7 @@ window.addEventListener("keydown", e => {
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
-function ejecutarPulo() {
+function executarPulo() {
     if (player.grounded) {
         player.vy = player.jumpForce;
         player.grounded = false;
@@ -215,7 +207,7 @@ function handleTouch(e) {
     for (let i = 0; i < e.touches.length; i++) {
         const touch = e.touches[i];
         
-        // Conversão precisa adaptada para o redimensionamento horizontal do canvas
+        // CORREÇÃO: Mapeia as coordenadas de toque do tamanho real do navegador de volta para a proporção 384x384 do jogo
         const touchX = ((touch.clientX - rect.left) / rect.width) * GAME_WIDTH;
         const touchY = ((touch.clientY - rect.top) / rect.height) * GAME_HEIGHT;
         
@@ -262,7 +254,6 @@ window.addEventListener("touchend", (e) => {
     }
 }, { passive: false });
 
-
 // --- SISTEMA DE RANKING E INÍCIO ---
 function salvarRanking(nome, tempo) {
     let ranking = JSON.parse(localStorage.getItem("gameRanking")) || [];
@@ -281,10 +272,6 @@ function startGame() {
     }
     
     nomeInput.style.display = "none";
-    canvas.classList.remove("menu-style");
-    canvas.classList.add("game-style");
-    canvas.width = GAME_WIDTH;
-    canvas.height = GAME_HEIGHT;
     
     gameState = "PLAYING";
     gameTimer = 0;
@@ -322,37 +309,34 @@ window.addEventListener("click", (e) => {
 
 // --- MAPAS ---
 const levels = [
-    // SALA 1
     [
         [2, 2, 2, 2, 2, 2, 2, 2],
         [2, 4, 0, 0, 0, 0, 4, 2], 
         [2, 0, 0, 7, 7, 0, 0, 2], 
-        [2, 3, 0, 0, 0, 0, 3, 2],
+        [2, 0, 0, 0, 0, 0, 0, 2],
         [2, 6, 6, 0, 0, 6, 6, 2], 
         [2, 0, 0, 0, 5, 0, 0, 2], 
-        [2, 4, 1, 1, 1, 1, 3, 2], 
+        [2, 4, 1, 1, 1, 1, 0, 2], 
         [2, 2, 2, 2, 2, 2, 2, 2]  
     ],
-    // SALA 2
     [
         [2, 2, 2, 2, 2, 2, 2, 2],
-        [2, 4, 3, 0, 0, 3, 4, 2],
-        [2, 0, 0, 0, 0, 0, 0, 2],
-        [2, 0, 66,0, 0, 77,0, 2], 
-        [2, 6, 6, 6, 7, 7, 7, 2], 
-        [2, 3, 0, 0, 0, 0, 5, 2], 
-        [2, 4, 1, 1, 1, 3, 0, 2], 
+        [2, 4, 0, 0, 0, 0, 4, 2],
+        [2, 6, 6, 6, 0, 0, 0, 2],
+        [2, 0, 0, 0, 0, 77,0, 2], 
+        [2, 0, 0, 0, 7, 7, 7, 2], 
+        [2, 0, 0, 0, 0, 0, 5, 2], 
+        [2, 4, 1, 1, 1, 0, 0, 2], 
         [2, 2, 2, 2, 2, 2, 2, 2]
     ],
-    // SALA 3
     [
         [2, 2, 2, 2, 2, 2, 2, 2],
-        [2, 5, 3, 0, 0, 3, 4, 2],
+        [2, 5, 0, 0, 0, 0, 4, 2],
         [2, 0, 0, 0, 0, 0, 77,2], 
         [2, 6, 6, 0, 7, 7, 7, 2], 
-        [2, 0, 66,0, 0, 0, 3, 2], 
+        [2, 0, 66,0, 0, 0, 0, 2], 
         [2, 6, 6, 6, 0, 0, 0, 2], 
-        [2, 4, 1, 1, 1, 3, 4, 2], 
+        [2, 4, 1, 1, 1, 0, 4, 2], 
         [2, 2, 2, 2, 2, 2, 2, 2]
     ]
 ];
@@ -421,9 +405,6 @@ function update() {
         } else {
             salvarRanking(nomeJogador, gameTimer);
             gameState = "RANKING";
-            
-            canvas.classList.remove("game-style");
-            canvas.classList.add("menu-style");
             initCanvas();
         }
     }
@@ -487,38 +468,39 @@ function checkCollision(dir) {
 }
 
 function draw() {
+    // CORREÇÃO: Todas as telas agora desenham de forma fixa em cima da proporção GAME_WIDTH x GAME_HEIGHT
     if (gameState === "START_MENU") {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(imgInicio, 0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.drawImage(imgInicio, 0, 0, GAME_WIDTH, GAME_HEIGHT);
         return;
     }
 
     if (gameState === "RANKING") {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(imgInicio, 0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.drawImage(imgInicio, 0, 0, GAME_WIDTH, GAME_HEIGHT);
         
         ctx.fillStyle = "rgba(8, 8, 16, 0.82)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         
         ctx.textAlign = "center";
         ctx.fillStyle = "#00ffff";
-        ctx.font = "bold 42px monospace";
-        ctx.fillText("🏆 RANKING GERAL 🏆", canvas.width / 2, 90);
+        ctx.font = "bold 24px monospace";
+        ctx.fillText("🏆 RANKING GERAL 🏆", GAME_WIDTH / 2, 60);
         
         let ranking = obterRanking();
-        ctx.font = "bold 22px monospace";
+        ctx.font = "bold 12px monospace";
         
-        let yPos = 170;
-        for (let i = 0; i < Math.min(ranking.length, 8); i++) {
+        let yPos = 110;
+        for (let i = 0; i < Math.min(ranking.length, 5); i++) {
             let cor = i === 0 ? "#ffff00" : (i === 1 ? "#cccccc" : (i === 2 ? "#cd7f32" : "#ffffff"));
             ctx.fillStyle = cor;
-            ctx.fillText(`${i + 1}º MATRIZ | ${ranking[i].nome} - ${ranking[i].tempo}s`, canvas.width / 2, yPos);
-            yPos += 45;
+            ctx.fillText(`${i + 1}º MATRIZ | ${ranking[i].nome} - ${ranking[i].tempo}s`, GAME_WIDTH / 2, yPos);
+            yPos += 30;
         }
 
         ctx.fillStyle = "#888";
-        ctx.font = "16px monospace";
-        ctx.fillText(isMobile ? "Toque na tela para reiniciar" : "Clique em qualquer lugar para reiniciar", canvas.width / 2, canvas.height - 50);
+        ctx.font = "10px monospace";
+        ctx.fillText(isMobile ? "Toque na tela para reiniciar" : "Clique em qualquer lugar para reiniciar", GAME_WIDTH / 2, GAME_HEIGHT - 30);
         ctx.textAlign = "left"; 
         return;
     }
@@ -593,7 +575,7 @@ function draw() {
         }
         ctx.restore();
 
-        // --- BOTÕES MOBILE (Visíveis e funcionais na horizontal) ---
+        // --- BOTÕES MOBILE ---
         if (isMobile) {
             ctx.globalAlpha = mobileControls.esquerda.pressed ? 0.9 : 0.55;
             ctx.drawImage(imgBtnEsquerda, mobileControls.esquerda.x, mobileControls.esquerda.y, mobileControls.esquerda.w, mobileControls.esquerda.h);
