@@ -165,8 +165,8 @@ carregarSprite("chao", "sprites/chao novo.png");
 carregarSprite("chaoAlt", "sprites/chao novo alt.png");
 carregarSprite("espinho", "sprites/espinhos.png");
 carregarSprite("personagem", "sprites/personagem.png"); 
-carregarSprite("discoPartido", "sprites/disco partido.PNG");   // CORREÇÃO: Extensão alterada para .PNG
-carregarSprite("discoCompleto", "sprites/disco completo.PNG"); // CORREÇÃO: Extensão alterada para .PNG
+carregarSprite("discoPartido", "sprites/disco partido.PNG");   
+carregarSprite("discoCompleto", "sprites/disco completo.PNG"); 
 carregarSprite("fundoClaro", "sprites/FUNDO CLARO.PNG");
 carregarSprite("fundoEscuro", "sprites/FUNDO ESCURO.PNG");
 carregarSprite("mato", "sprites/mato.png");
@@ -175,10 +175,11 @@ carregarSprite("esquerda", "sprites/esquerda.png");
 carregarSprite("direita", "sprites/direita.png");
 carregarSprite("pulo", "sprites/pulo.png");
 
+// CORREÇÃO: Carrega as animações de andando_2.PNG até andando_7.PNG de forma segura
 const imgAndando = [];
-for (let i = 1; i <= 7; i++) {
+for (let i = 2; i <= 7; i++) {
     const img = new Image();
-    img.src = `sprites/andando_${i}.png`;
+    img.src = `sprites/andando_${i}.PNG`;
     img.loaded = false;
     img.onload = () => { img.loaded = true; };
     imgAndando.push(img);
@@ -195,10 +196,9 @@ const TILE_SIZE = 48;
 
 let animFrame = 0;
 let ultimoTempoFrame = 0;
-const INTERVALO_FRAME = 100; 
+const INTERVALO_FRAME = 100; // CORREÇÃO: Tick rate fixado rigorosamente em 100ms
 let olhandoParaEsquerda = false;
 
-// Estado dos botões de controle externos
 const externoControls = { esquerda: false, direita: false };
 
 const player = {
@@ -216,7 +216,7 @@ window.addEventListener("keydown", e => {
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
-function ejecutarPulo() {
+function executarPulo() {
     if (player.grounded) {
         player.vy = player.jumpForce;
         player.grounded = false;
@@ -224,7 +224,6 @@ function ejecutarPulo() {
     }
 }
 
-// Cliques nos botões externos (HTML) - Incluindo o botão de Pulo
 document.getElementById("btnEsquerda").addEventListener("touchstart", (e) => { e.preventDefault(); externoControls.esquerda = true; });
 document.getElementById("btnEsquerda").addEventListener("touchend", () => { externoControls.esquerda = false; });
 document.getElementById("btnDireita").addEventListener("touchstart", (e) => { e.preventDefault(); externoControls.direita = true; });
@@ -323,7 +322,9 @@ function update() {
     if (andando && player.grounded) {
         let agora = performance.now();
         if (agora - ultimoTempoFrame > INTERVALO_FRAME) {
-            animFrame = (animFrame + 1) % 7; ultimoTempoFrame = agora;
+            // Rotaciona entre 6 imagens carregadas (de 0 a 5 na Array)
+            animFrame = (animFrame + 1) % 6; 
+            ultimoTempoFrame = agora;
         }
     } else { animFrame = -1; }
 
@@ -463,7 +464,7 @@ function draw() {
         ctx.save(); let posX = player.x;
         if (olhandoParaEsquerda) { ctx.scale(-1, 1); posX = -player.x - player.width; }
         
-        // CORREÇÃO DO SUMIÇO: Adicionada a verificação `.loaded` para garantir estabilidade e fallback para o sprite base
+        // CORREÇÃO DA ANIMAÇÃO: Exibe as imagens corretas da array com fallback seguro
         if (animFrame >= 0 && imgAndando[animFrame] && imgAndando[animFrame].loaded) {
             ctx.drawImage(imgAndando[animFrame], posX, player.y, player.width, player.height);
         } else if (sprites.personagem.loaded) {
