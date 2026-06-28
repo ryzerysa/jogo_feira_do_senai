@@ -39,15 +39,12 @@
             background-color: #111;
             max-width: 100vw;
             max-height: 100vh;
-            width: auto;
-            height: 100vh;
-            aspect-ratio: 1 / 1;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
         
         /* BARRA DE MOVIMENTAÇÃO FORA DA CAIXA DO JOGO */
         #barraMovimentoMobile {
-            display: none; /* Ativado via JavaScript apenas no mobile */
+            display: none; 
             width: 100%;
             max-width: 384px;
             height: 80px;
@@ -117,15 +114,22 @@ const GAME_WIDTH = 384;
 const GAME_HEIGHT = 384;
 
 let isMobile = false;
+let gameState = "START_MENU"; 
+let nomeJogador = "PLAYER";
 
 function initCanvas() {
     isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 900);
     
-    if (isMobile && gameState === "PLAYING") {
+    if (gameState === "START_MENU" || gameState === "RANKING") {
+        barraMovimentoMobile.style.display = "none";
+        canvas.width = GAME_WIDTH;
+        canvas.height = GAME_HEIGHT;
+        canvas.style.height = "100vh";
+        canvas.style.width = "auto";
+    } else if (isMobile && gameState === "PLAYING") {
         barraMovimentoMobile.style.display = "block";
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
-        // Ajusta a altura descontando o painel de botões de baixo
         canvas.style.height = "calc(100vh - 80px)";
         canvas.style.width = "auto";
     } else {
@@ -137,10 +141,6 @@ function initCanvas() {
     }
 }
 window.addEventListener('resize', initCanvas);
-initCanvas();
-
-let gameState = "START_MENU"; 
-let nomeJogador = "PLAYER";
 
 // --- SISTEMA SEGURO DE SPRITES ---
 const sprites = {};
@@ -193,12 +193,10 @@ let ultimoTempoFrame = 0;
 const INTERVALO_FRAME = 100; 
 let olhandoParaEsquerda = false;
 
-// Apenas o botão de pulo continua na tela
 const mobileControls = {
     pulo: { x: GAME_WIDTH - 65, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false }
 };
 
-// Estado dos botões de movimento externos
 const externoControls = { esquerda: false, direita: false };
 
 const player = {
@@ -224,13 +222,11 @@ function executarPulo() {
     }
 }
 
-// Cliques nos botões externos de movimento
 document.getElementById("btnEsquerda").addEventListener("touchstart", (e) => { e.preventDefault(); externoControls.esquerda = true; });
 document.getElementById("btnEsquerda").addEventListener("touchend", () => { externoControls.esquerda = false; });
 document.getElementById("btnDireita").addEventListener("touchstart", (e) => { e.preventDefault(); externoControls.direita = true; });
 document.getElementById("btnDireita").addEventListener("touchend", () => { externoControls.direita = false; });
 
-// Captura de toque na tela interna do jogo (apenas para o Pulo)
 function handleTouch(e) {
     if (gameState !== "PLAYING") return;
     const rect = canvas.getBoundingClientRect();
@@ -242,7 +238,7 @@ function handleTouch(e) {
         const touchY = ((touch.clientY - rect.top) / rect.height) * GAME_HEIGHT;
         
         if (touchX >= mobileControls.pulo.x && touchX <= mobileControls.pulo.x + mobileControls.pulo.w &&
-            touchY >= mobileControls.pulo.y && touchY <= mobileControls.pulo.y + mobileControls.pulo.h) {
+            touchY >= mobileControls.pulo.y && touchY <= mobileControls.pulo.y + mobileControls.pulo.w) {
             if (!mobileControls.pulo.pressed) executarPulo();
             pulandoNesteFrame = true;
         }
@@ -272,8 +268,15 @@ function startGame() {
 }
 
 nomeInput.addEventListener("keydown", e => { if (e.key === "Enter" && gameState === "START_MENU") startGame(); });
+
+// CORREÇÃO DO CLIQUE: Captura o clique direto no container ou canvas para aceitar o toque em celulares na tela inicial
 window.addEventListener("click", e => {
-    if (e.target === nomeInput || ('ontouchstart' in window && gameState === "PLAYING")) return;
+    if (e.target === nomeInput) return;
+    if (gameState === "START_MENU") startGame();
+    else if (gameState === "RANKING") { gameState = "START_MENU"; nomeInput.style.display = "block"; initCanvas(); }
+});
+window.addEventListener("touchstart", e => {
+    if (e.target === nomeInput || e.target.classList.contains('btn-movimento')) return;
     if (gameState === "START_MENU") startGame();
     else if (gameState === "RANKING") { gameState = "START_MENU"; nomeInput.style.display = "block"; initCanvas(); }
 });
@@ -486,7 +489,6 @@ function draw() {
         } else { ctx.fillStyle = "#0f0"; ctx.fillRect(posX, player.y, player.width, player.height); }
         ctx.restore();
 
-        // Botão de Pulo (Continua dentro da tela)
         if (isMobile) {
             ctx.save();
             ctx.globalAlpha = mobileControls.pulo.pressed ? 0.9 : 0.5;
@@ -502,6 +504,8 @@ function draw() {
         ctx.fillText(`F: ${currentLevel + 1}/3 T: ${gameTimer}s`, GAME_WIDTH - 120, 16);
     }
 }
+
+initCanvas();
 
 function loop() { update(); draw(); requestAnimationFrame(loop); }
 loop();
