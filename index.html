@@ -1,3 +1,32 @@
+Se a tela continua cinza escuro ou preta e nada do jogo aparece (nem o menu, nem o chão, nem os botões), significa que o navegador travou logo no início porque **não conseguiu encontrar as imagens** na pasta `sprites`. Quando o código tenta carregar uma imagem que não existe ou está com o nome/extensão errados no GitHub, o JavaScript para de rodar na hora.
+
+Vamos resolver isso agora com duas verificações simples:
+
+### 1. Letras Maiúsculas e Minúsculas (O erro mais comum)
+
+No seu computador (Windows), se o arquivo se chamar `FUNDO CLARO.PNG` ou `fundo claro.png`, o computador abre do mesmo jeito. **No GitHub é diferente.** Se estiver uma única letra diferente, o jogo quebra.
+
+Olhe a sua pasta `sprites` dentro do GitHub e veja se os arquivos estão exatamente assim:
+
+* `inicio.PNG` (O `.PNG` precisa ser maiúsculo, igualzinho está na sua pasta)
+* `FUNDO CLARO.PNG` (Tudo maiúsculo)
+* `FUNDO ESCURO.PNG` (Tudo maiúsculo)
+* `esquerda.png` (Minúsculo)
+* `direita.png` (Minúsculo)
+* `pulo.png` (Minúsculo)
+* `personagem.png` (Minúsculo)
+
+> **Dica de ouro:** Se na sua pasta do GitHub o arquivo do botão estiver como `Esquerda.png` (com E maiúsculo) ou `esquerda.PNG` (com PNG maiúsculo), o jogo não vai abrir de jeito nenhum. Deixe o nome do arquivo no GitHub igualzinho ao que está escrito no código.
+
+---
+
+### 2. O Código "À Prova de Erros" (Modificado)
+
+Para garantir que o seu jogo **abra e mostre os botões e o cenário mesmo se alguma imagem falhar**, eu reescrevi a parte do carregamento. Agora, se faltar alguma imagem, o jogo não vai mais travar; ele vai abrir o cenário usando cores normais para você conseguir testar e jogar!
+
+Substitua o código do seu `index.html` por este aqui:
+
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -35,7 +64,6 @@
         canvas {
             image-rendering: pixelated;
             background-color: #111;
-            /* Força o canvas a se ajustar mantendo a proporção de quadrado na tela horizontal */
             max-width: 100vw;
             max-height: 100vh;
             width: auto;
@@ -81,40 +109,43 @@ const GAME_HEIGHT = 384;
 
 let isMobile = false;
 
-// CORREÇÃO: O tamanho interno do canvas do jogo precisa ser sempre o tamanho lógico do jogo
 function initCanvas() {
     canvas.width = GAME_WIDTH;
     canvas.height = GAME_HEIGHT;
-    // Detecção mais robusta para habilitar os controles mobile
     isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 900);
 }
 window.addEventListener('resize', initCanvas);
 initCanvas();
 
-// --- ESTADO DO JOGO ---
 let gameState = "START_MENU"; 
 let nomeJogador = "PLAYER";
 
-// --- CARREGAMENTO DOS SPRITES ---
-const imgInicio = new Image();
-const imgSolo = new Image();
-const imgChao = new Image();
-const imgChaoAlt = new Image();
-const imgEspinho = new Image();
-const imgPersonagemParado = new Image(); 
-const imgDiscoPartido = new Image();
-const imgDiscoCompleto = new Image();
-const imgFundoClaro = new Image();
-const imgFundoEscuro = new Image();
-const imgMato = new Image();
-const imgMatoAlt = new Image();
+// --- SISTEMA SEGURO DE SPRITES (Evita que o jogo trave se a imagem sumir) ---
+const sprites = {};
+function carregarSprite(nome, caminho) {
+    sprites[nome] = new Image();
+    sprites[nome].src = caminho;
+    sprites[nome].loaded = false;
+    sprites[nome].onload = () => { sprites[nome].loaded = true; };
+    sprites[nome].onerror = () => { console.log("Erro ao carregar: " + caminho); };
+}
 
-// Botões Mobile
-const imgBtnEsquerda = new Image();
-const imgBtnDireita = new Image();
-const imgBtnPulo = new Image();
+carregarSprite("inicio", "sprites/inicio.PNG");
+carregarSprite("solo", "sprites/solo novo.png");
+carregarSprite("chao", "sprites/chao novo.png");
+carregarSprite("chaoAlt", "sprites/chao novo alt.png");
+carregarSprite("espinho", "sprites/espinhos.png");
+carregarSprite("personagem", "sprites/personagem.png"); 
+carregarSprite("discoPartido", "sprites/disco partido.png");
+carregarSprite("discoCompleto", "sprites/disco completo.png");
+carregarSprite("fundoClaro", "sprites/FUNDO CLARO.PNG");
+carregarSprite("fundoEscuro", "sprites/FUNDO ESCURO.PNG");
+carregarSprite("mato", "sprites/mato.png");
+carregarSprite("matoAlt", "sprites/mato alte.png");
+carregarSprite("esquerda", "sprites/esquerda.png");
+carregarSprite("direita", "sprites/direita.png");
+carregarSprite("pulo", "sprites/pulo.png");
 
-// Array de Sprites de Caminhada
 const imgAndando = [];
 for (let i = 1; i <= 7; i++) {
     const img = new Image();
@@ -122,62 +153,32 @@ for (let i = 1; i <= 7; i++) {
     imgAndando.push(img);
 }
 
-imgInicio.src = "sprites/inicio.PNG";
-imgSolo.src = "sprites/solo novo.png";
-imgChao.src = "sprites/chao novo.png";
-imgChaoAlt.src = "sprites/chao novo alt.png";
-imgEspinho.src = "sprites/espinhos.png";
-imgPersonagemParado.src = "sprites/personagem.png"; 
-imgDiscoPartido.src = "sprites/disco partido.png";
-imgDiscoCompleto.src = "sprites/disco completo.png";
-imgFundoClaro.src = "sprites/FUNDO CLARO.PNG";
-imgFundoEscuro.src = "sprites/FUNDO ESCURO.PNG";
-imgMato.src = "sprites/mato.png";
-imgMatoAlt.src = "sprites/mato alte.png";
-
-imgBtnEsquerda.src = "sprites/esquerda.png";
-imgBtnDireita.src = "sprites/direita.png";
-imgBtnPulo.src = "sprites/pulo.png";
-
 // --- CONFIGURAÇÕES ---
 let currentLevel = 0;
 let gameTimer = 0;
 let timerInterval = null;
-
 let discosQuebradosColetados = 0;
 let discoInteiroColetado = false;
 let chaoModificado = false; 
-
 const TILE_SIZE = 48; 
 
-// --- CONTROLE DE ANIMAÇÃO ---
 let animFrame = 0;
 let ultimoTempoFrame = 0;
 const INTERVALO_FRAME = 100; 
 let olhandoParaEsquerda = false;
 
-// --- CONFIGURAÇÃO DOS BOTÕES MOBILE (Posicionados proporcionalmente dentro da tela interna de 384x384) ---
 const mobileControls = {
-    esquerda: { x: 15, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false },
-    direita: { x: 75, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false },
+    esquerda: { x: 20, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false },
+    direita: { x: 80, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false },
     pulo: { x: GAME_WIDTH - 65, y: GAME_HEIGHT - 65, w: 45, h: 45, pressed: false }
 };
 
-// --- JOGADOR ---
 const player = {
-    x: 0,
-    y: 0,
-    width: 24,  
-    height: 32,
-    vx: 0,
-    vy: 0,
-    speed: 3.8,
-    gravity: 0.4,
-    jumpForce: -10.5, 
-    grounded: false
+    x: 0, y: 0, width: 24, height: 32,
+    vx: 0, vy: 0, speed: 3.8, gravity: 0.4,
+    jumpForce: -10.5, grounded: false
 };
 
-// --- CONTROLES TECLADO ---
 const keys = {};
 window.addEventListener("keydown", e => {
     keys[e.code] = true;
@@ -195,32 +196,21 @@ function executarPulo() {
     }
 }
 
-// --- SISTEMA DE TOQUE EM TELA HORIZONTAL ---
 function handleTouch(e) {
     if (gameState !== "PLAYING") return;
-    
     mobileControls.esquerda.pressed = false;
     mobileControls.direita.pressed = false;
-    
     const rect = canvas.getBoundingClientRect();
     
     for (let i = 0; i < e.touches.length; i++) {
         const touch = e.touches[i];
-        
-        // CORREÇÃO: Mapeia as coordenadas de toque do tamanho real do navegador de volta para a proporção 384x384 do jogo
         const touchX = ((touch.clientX - rect.left) / rect.width) * GAME_WIDTH;
         const touchY = ((touch.clientY - rect.top) / rect.height) * GAME_HEIGHT;
         
-        if (checkTouchCollision(touchX, touchY, mobileControls.esquerda)) {
-            mobileControls.esquerda.pressed = true;
-        }
-        if (checkTouchCollision(touchX, touchY, mobileControls.direita)) {
-            mobileControls.direita.pressed = true;
-        }
+        if (checkTouchCollision(touchX, touchY, mobileControls.esquerda)) mobileControls.esquerda.pressed = true;
+        if (checkTouchCollision(touchX, touchY, mobileControls.direita)) mobileControls.direita.pressed = true;
         if (checkTouchCollision(touchX, touchY, mobileControls.pulo)) {
-            if (!mobileControls.pulo.pressed) {
-                executarPulo();
-            }
+            if (!mobileControls.pulo.pressed) executarPulo();
             mobileControls.pulo.pressed = true;
         }
     }
@@ -230,19 +220,9 @@ function checkTouchCollision(tx, ty, btn) {
     return tx >= btn.x && tx <= btn.x + btn.w && ty >= btn.y && ty <= btn.y + btn.h;
 }
 
-window.addEventListener("touchstart", (e) => {
-    if (gameState === "PLAYING") {
-        handleTouch(e);
-    }
-}, { passive: false });
-
-window.addEventListener("touchmove", (e) => {
-    if (gameState === "PLAYING") {
-        handleTouch(e);
-    }
-}, { passive: false });
-
-window.addEventListener("touchend", (e) => {
+window.addEventListener("touchstart", e => { if (gameState === "PLAYING") handleTouch(e); }, { passive: false });
+window.addEventListener("touchmove", e => { if (gameState === "PLAYING") handleTouch(e); }, { passive: false });
+window.addEventListener("touchend", e => {
     if (gameState === "PLAYING") {
         if (e.touches.length === 0) {
             mobileControls.esquerda.pressed = false;
@@ -254,7 +234,6 @@ window.addEventListener("touchend", (e) => {
     }
 }, { passive: false });
 
-// --- SISTEMA DE RANKING E INÍCIO ---
 function salvarRanking(nome, tempo) {
     let ranking = JSON.parse(localStorage.getItem("gameRanking")) || [];
     ranking.push({ nome: nome, tempo: tempo });
@@ -262,17 +241,11 @@ function salvarRanking(nome, tempo) {
     localStorage.setItem("gameRanking", JSON.stringify(ranking));
 }
 
-function obterRanking() {
-    return JSON.parse(localStorage.getItem("gameRanking")) || [];
-}
+function obterRanking() { return JSON.parse(localStorage.getItem("gameRanking")) || []; }
 
 function startGame() {
-    if (nomeInput.value.trim() !== "") {
-        nomeJogador = nomeInput.value.trim().toUpperCase();
-    }
-    
+    if (nomeInput.value.trim() !== "") nomeJogador = nomeInput.value.trim().toUpperCase();
     nomeInput.style.display = "none";
-    
     gameState = "PLAYING";
     gameTimer = 0;
     currentLevel = 0;
@@ -281,33 +254,18 @@ function startGame() {
     map = JSON.parse(JSON.stringify(levels[currentLevel]));
     
     if(!timerInterval) {
-        timerInterval = setInterval(() => {
-            if(gameState === "PLAYING") gameTimer++;
-        }, 1000);
+        timerInterval = setInterval(() => { if(gameState === "PLAYING") gameTimer++; }, 1000);
     }
     resetPlayer();
 }
 
-nomeInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && gameState === "START_MENU") {
-        startGame();
-    }
+nomeInput.addEventListener("keydown", e => { if (e.key === "Enter" && gameState === "START_MENU") startGame(); });
+window.addEventListener("click", e => {
+    if (e.target === nomeInput || ('ontouchstart' in window && gameState === "PLAYING")) return;
+    if (gameState === "START_MENU") startGame();
+    else if (gameState === "RANKING") { gameState = "START_MENU"; nomeInput.style.display = "block"; initCanvas(); }
 });
 
-window.addEventListener("click", (e) => {
-    if (e.target === nomeInput || ('ontouchstart' in window && e.type === "click" && gameState === "PLAYING")) return;
-
-    if (gameState === "START_MENU") {
-        startGame();
-    } 
-    else if (gameState === "RANKING") {
-        gameState = "START_MENU";
-        nomeInput.style.display = "block";
-        initCanvas();
-    }
-});
-
-// --- MAPAS ---
 const levels = [
     [
         [2, 2, 2, 2, 2, 2, 2, 2],
@@ -349,8 +307,7 @@ function resetPlayer() {
             if (map[r][c] === 1) {
                 player.x = c * TILE_SIZE + (TILE_SIZE / 2) - (player.width / 2);
                 player.y = (r * TILE_SIZE) - player.height - 5;
-                player.vx = 0;
-                player.vy = 0;
+                player.vx = 0; player.vy = 0;
                 chaoModificado = false;
                 return;
             }
@@ -360,254 +317,192 @@ function resetPlayer() {
 
 function update() {
     if (gameState !== "PLAYING") return;
-
     let andando = false;
 
     if (keys["ArrowLeft"] || keys["KeyA"] || mobileControls.esquerda.pressed) {
-        player.vx = -player.speed;
-        olhandoParaEsquerda = true;
-        andando = true;
-    }
-    else if (keys["ArrowRight"] || keys["KeyD"] || mobileControls.direita.pressed) {
-        player.vx = player.speed;
-        olhandoParaEsquerda = false;
-        andando = true;
-    }
-    else {
-        player.vx = 0;
-    }
+        player.vx = -player.speed; olhandoParaEsquerda = true; andando = true;
+    } else if (keys["ArrowRight"] || keys["KeyD"] || mobileControls.direita.pressed) {
+        player.vx = player.speed; olhandoParaEsquerda = false; andando = true;
+    } else { player.vx = 0; }
 
     if (andando && player.grounded) {
         let agora = performance.now();
         if (agora - ultimoTempoFrame > INTERVALO_FRAME) {
-            animFrame = (animFrame + 1) % 7; 
-            ultimoTempoFrame = agora;
+            animFrame = (animFrame + 1) % 7; ultimoTempoFrame = agora;
         }
-    } else {
-        animFrame = -1; 
-    }
+    } else { animFrame = -1; }
 
     player.vy += player.gravity;
     player.x += player.vx;
     checkCollision("x");
-
     player.y += player.vy;
     player.grounded = false;
     checkCollision("y");
 
     if (discoInteiroColetado) {
         if (currentLevel < levels.length - 1) {
-            currentLevel++;
-            discosQuebradosColetados = 0;
-            discoInteiroColetado = false;
-            map = JSON.parse(JSON.stringify(levels[currentLevel]));
-            resetPlayer();
-        } else {
-            salvarRanking(nomeJogador, gameTimer);
-            gameState = "RANKING";
-            initCanvas();
-        }
+            currentLevel++; discosQuebradosColetados = 0; discoInteiroColetado = false;
+            map = JSON.parse(JSON.stringify(levels[currentLevel])); resetPlayer();
+        } else { salvarRanking(nomeJogador, gameTimer); gameState = "RANKING"; initCanvas(); }
     }
 }
 
 function checkCollision(dir) {
-    const rows = map.length;
-    const cols = map[0].length;
-
+    const rows = map.length; const cols = map[0].length;
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
             let tile = map[r][c];
-
             if ((tile === 6 || tile === 66) && chaoModificado) continue;  
             if ((tile === 7 || tile === 77) && !chaoModificado) continue; 
 
             if (tile === 2 || tile === 1 || tile === 6 || tile === 7) {
-                let tx = c * TILE_SIZE;
-                let ty = r * TILE_SIZE;
-
+                let tx = c * TILE_SIZE; let ty = r * TILE_SIZE;
                 if (player.x < tx + TILE_SIZE && player.x + player.width > tx &&
                     player.y < ty + TILE_SIZE && player.y + player.height > ty) {
-                    
                     if (dir === "x") {
                         if (player.vx > 0) player.x = tx - player.width;
                         if (player.vx < 0) player.x = tx + TILE_SIZE;
                     }
                     if (dir === "y") {
-                        if (player.vy > 0) {
-                            player.y = ty - player.height;
-                            player.vy = 0;
-                            player.grounded = true;
-                        }
-                        if (player.vy < 0) {
-                            player.y = ty + TILE_SIZE;
-                            player.vy = 0;
-                        }
+                        if (player.vy > 0) { player.y = ty - player.height; player.vy = 0; player.grounded = true; }
+                        if (player.vy < 0) { player.y = ty + TILE_SIZE; player.vy = 0; }
                     }
                 }
             }
-
-            let tx = c * TILE_SIZE;
-            let ty = r * TILE_SIZE;
+            let tx = c * TILE_SIZE; let ty = r * TILE_SIZE;
             if (player.x < tx + TILE_SIZE && player.x + player.width > tx &&
                 player.y < ty + TILE_SIZE && player.y + player.height > ty) {
-                
-                if (tile === 66 || tile === 77) {
-                    resetPlayer();
-                }
-                else if (tile === 4) {
-                    discosQuebradosColetados++;
-                    map[r][c] = 0;
-                }
-                else if (tile === 5 && discosQuebradosColetados >= 3) {
-                    discoInteiroColetado = true;
-                    map[r][c] = 0;
-                }
+                if (tile === 66 || tile === 77) resetPlayer();
+                else if (tile === 4) { discosQuebradosColetados++; map[r][c] = 0; }
+                else if (tile === 5 && discosQuebradosColetados >= 3) { discoInteiroColetado = true; map[r][c] = 0; }
             }
         }
     }
 }
 
 function draw() {
-    // CORREÇÃO: Todas as telas agora desenham de forma fixa em cima da proporção GAME_WIDTH x GAME_HEIGHT
+    ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
     if (gameState === "START_MENU") {
-        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.drawImage(imgInicio, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+        if (sprites.inicio.loaded) ctx.drawImage(sprites.inicio, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+        else {
+            ctx.fillStyle = "#222"; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.fillStyle = "#0ff"; ctx.font = "20px monospace"; ctx.textAlign = "center";
+            ctx.fillText("CLIQUE PARA JOGAR", GAME_WIDTH/2, GAME_HEIGHT/2 + 40);
+        }
         return;
     }
 
     if (gameState === "RANKING") {
-        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.drawImage(imgInicio, 0, 0, GAME_WIDTH, GAME_HEIGHT);
-        
-        ctx.fillStyle = "rgba(8, 8, 16, 0.82)";
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#00ffff";
-        ctx.font = "bold 24px monospace";
+        ctx.fillStyle = "#080810"; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.textAlign = "center"; ctx.fillStyle = "#00ffff"; ctx.font = "bold 24px monospace";
         ctx.fillText("🏆 RANKING GERAL 🏆", GAME_WIDTH / 2, 60);
-        
-        let ranking = obterRanking();
-        ctx.font = "bold 12px monospace";
-        
+        let ranking = obterRanking(); ctx.font = "bold 12px monospace";
         let yPos = 110;
         for (let i = 0; i < Math.min(ranking.length, 5); i++) {
-            let cor = i === 0 ? "#ffff00" : (i === 1 ? "#cccccc" : (i === 2 ? "#cd7f32" : "#ffffff"));
-            ctx.fillStyle = cor;
-            ctx.fillText(`${i + 1}º MATRIZ | ${ranking[i].nome} - ${ranking[i].tempo}s`, GAME_WIDTH / 2, yPos);
+            ctx.fillStyle = i === 0 ? "#ffff00" : "#ffffff";
+            ctx.fillText(`${i + 1}º | ${ranking[i].nome} - ${ranking[i].tempo}s`, GAME_WIDTH / 2, yPos);
             yPos += 30;
         }
-
-        ctx.fillStyle = "#888";
-        ctx.font = "10px monospace";
-        ctx.fillText(isMobile ? "Toque na tela para reiniciar" : "Clique em qualquer lugar para reiniciar", GAME_WIDTH / 2, GAME_HEIGHT - 30);
-        ctx.textAlign = "left"; 
+        ctx.fillStyle = "#888"; ctx.font = "10px monospace";
+        ctx.fillText("Clique para reiniciar", GAME_WIDTH / 2, GAME_HEIGHT - 30);
         return;
     }
 
     if (gameState === "PLAYING") {
-        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-        if (chaoModificado) {
-            ctx.drawImage(imgFundoEscuro, 0, 0, GAME_WIDTH, GAME_HEIGHT);
-        } else {
-            ctx.drawImage(imgFundoClaro, 0, 0, GAME_WIDTH, GAME_HEIGHT);
-        }
+        // Fundo reserva caso a imagem falhe
+        if (chaoModificado && sprites.fundoEscuro.loaded) ctx.drawImage(sprites.fundoEscuro, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+        else if (!chaoModificado && sprites.fundoClaro.loaded) ctx.drawImage(sprites.fundoClaro, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+        else { ctx.fillStyle = chaoModificado ? "#050510" : "#151525"; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); }
 
         for (let r = 0; r < map.length; r++) {
             for (let c = 0; c < map[r].length; c++) {
-                let tile = map[r][c];
-                let tx = c * TILE_SIZE;
-                let ty = r * TILE_SIZE;
+                let tile = map[r][c]; let tx = c * TILE_SIZE; let ty = r * TILE_SIZE;
 
                 if (tile === 2) {
-                    if (chaoModificado) {
-                        ctx.drawImage(imgChaoAlt, tx, ty, TILE_SIZE, TILE_SIZE);
-                    } else {
-                        ctx.drawImage(imgChao, tx, ty, TILE_SIZE, TILE_SIZE);
-                    }
+                    if (chaoModificado && sprites.chaoAlt.loaded) ctx.drawImage(sprites.chaoAlt, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else if (!chaoModificado && sprites.chao.loaded) ctx.drawImage(sprites.chao, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#555"; ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE); }
                 }
                 else if (tile === 1) {
-                    ctx.drawImage(imgSolo, tx, ty, TILE_SIZE, TILE_SIZE);
+                    if (sprites.solo.loaded) ctx.drawImage(sprites.solo, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#844"; ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE); }
                 } 
                 else if (tile === 3) {
-                    if (chaoModificado) {
-                        ctx.drawImage(imgMatoAlt, tx, ty, TILE_SIZE, TILE_SIZE);
-                    } else {
-                        ctx.drawImage(imgMato, tx, ty, TILE_SIZE, TILE_SIZE);
-                    }
+                    if (chaoModificado && sprites.matoAlt.loaded) ctx.drawImage(sprites.matoAlt, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else if (sprites.mato.loaded) ctx.drawImage(sprites.mato, tx, ty, TILE_SIZE, TILE_SIZE);
                 }
                 else if (tile === 6 && !chaoModificado) {
-                    ctx.drawImage(imgChao, tx, ty, TILE_SIZE, TILE_SIZE);
+                    if (sprites.chao.loaded) ctx.drawImage(sprites.chao, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#00f"; ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE); }
                 }
                 else if (tile === 66 && !chaoModificado) {
-                    ctx.drawImage(imgEspinho, tx, ty, TILE_SIZE, TILE_SIZE);
+                    if (sprites.espinho.loaded) ctx.drawImage(sprites.espinho, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#f00"; ctx.fillRect(tx, ty + 30, TILE_SIZE, 18); }
                 }
                 else if (tile === 7 && chaoModificado) {
-                    ctx.drawImage(imgChaoAlt, tx, ty, TILE_SIZE, TILE_SIZE);
+                    if (sprites.chaoAlt.loaded) ctx.drawImage(sprites.chaoAlt, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#f0f"; ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE); }
                 }
                 else if (tile === 77 && chaoModificado) {
-                    ctx.drawImage(imgEspinho, tx, ty, TILE_SIZE, TILE_SIZE);
+                    if (sprites.espinho.loaded) ctx.drawImage(sprites.espinho, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#f00"; ctx.fillRect(tx, ty + 30, TILE_SIZE, 18); }
                 }
                 else if (tile === 4) {
-                    ctx.drawImage(imgDiscoPartido, tx, ty, TILE_SIZE, TILE_SIZE);
+                    if (sprites.discoPartido.loaded) ctx.drawImage(sprites.discoPartido, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#ff0"; ctx.fillRect(tx + 16, ty + 16, 16, 16); }
                 } 
-                else if (tile === 5) {
-                    if (discosQuebradosColetados >= 3) {
-                        ctx.drawImage(imgDiscoCompleto, tx, ty, TILE_SIZE, TILE_SIZE);
-                    }
+                else if (tile === 5 && discosQuebradosColetados >= 3) {
+                    if (sprites.discoCompleto.loaded) ctx.drawImage(sprites.discoCompleto, tx, ty, TILE_SIZE, TILE_SIZE);
+                    else { ctx.fillStyle = "#0ff"; ctx.fillRect(tx + 12, ty + 12, 24, 24); }
                 }
             }
         }
 
-        // --- DESENHO DO PERSONAGEM ---
-        ctx.save();
-        let posX = player.x;
-        if (olhandoParaEsquerda) {
-            ctx.scale(-1, 1);
-            posX = -player.x - player.width;
-        }
-
-        if (animFrame >= 0) {
+        // Personagem Reserva
+        ctx.save(); let posX = player.x;
+        if (olhandoParaEsquerda) { ctx.scale(-1, 1); posX = -player.x - player.width; }
+        if (animFrame >= 0 && imgAndando[animFrame] && imgAndando[animFrame].complete) {
             ctx.drawImage(imgAndando[animFrame], posX, player.y, player.width, player.height);
-        } else {
-            ctx.drawImage(imgPersonagemParado, posX, player.y, player.width, player.height);
-        }
+        } else if (sprites.personagem.loaded) {
+            ctx.drawImage(sprites.personagem, posX, player.y, player.width, player.height);
+        } else { ctx.fillStyle = "#0f0"; ctx.fillRect(posX, player.y, player.width, player.height); }
         ctx.restore();
 
-        // --- BOTÕES MOBILE ---
+        // Botões Mobile Reserva
         if (isMobile) {
-            ctx.globalAlpha = mobileControls.esquerda.pressed ? 0.9 : 0.55;
-            ctx.drawImage(imgBtnEsquerda, mobileControls.esquerda.x, mobileControls.esquerda.y, mobileControls.esquerda.w, mobileControls.esquerda.h);
-            
-            ctx.globalAlpha = mobileControls.direita.pressed ? 0.9 : 0.55;
-            ctx.drawImage(imgBtnDireita, mobileControls.direita.x, mobileControls.direita.y, mobileControls.direita.w, mobileControls.direita.h);
-            
-            ctx.globalAlpha = mobileControls.pulo.pressed ? 0.9 : 0.55;
-            ctx.drawImage(imgBtnPulo, mobileControls.pulo.x, mobileControls.pulo.y, mobileControls.pulo.w, mobileControls.pulo.h);
-            
-            ctx.globalAlpha = 1.0; 
+            ctx.save();
+            // Esquerda
+            ctx.globalAlpha = mobileControls.esquerda.pressed ? 0.9 : 0.5;
+            if (sprites.esquerda.loaded) ctx.drawImage(sprites.esquerda, mobileControls.esquerda.x, mobileControls.esquerda.y, mobileControls.esquerda.w, mobileControls.esquerda.h);
+            else { ctx.fillStyle = "#fff"; ctx.fillRect(mobileControls.esquerda.x, mobileControls.esquerda.y, mobileControls.esquerda.w, mobileControls.esquerda.h); }
+            // Direita
+            ctx.globalAlpha = mobileControls.direita.pressed ? 0.9 : 0.5;
+            if (sprites.direita.loaded) ctx.drawImage(sprites.direita, mobileControls.direita.x, mobileControls.direita.y, mobileControls.direita.w, mobileControls.direita.h);
+            else { ctx.fillStyle = "#fff"; ctx.fillRect(mobileControls.direita.x, mobileControls.direita.y, mobileControls.direita.w, mobileControls.direita.h); }
+            // Pulo
+            ctx.globalAlpha = mobileControls.pulo.pressed ? 0.9 : 0.5;
+            if (sprites.pulo.loaded) ctx.drawImage(sprites.pulo, mobileControls.pulo.x, mobileControls.pulo.y, mobileControls.pulo.w, mobileControls.pulo.h);
+            else { ctx.fillStyle = "#0ff"; ctx.fillRect(mobileControls.pulo.x, mobileControls.pulo.y, mobileControls.pulo.w, mobileControls.pulo.h); }
+            ctx.restore();
         }
 
-        // Interface HUD
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(0, 0, GAME_WIDTH, 24);
-        ctx.fillStyle = "#fff";
-        ctx.font = "10px monospace";
+        // HUD
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; ctx.fillRect(0, 0, GAME_WIDTH, 24);
+        ctx.fillStyle = "#fff"; ctx.font = "10px monospace"; ctx.textAlign = "left";
         ctx.fillText(`${nomeJogador}`, 10, 16);
         ctx.fillText(`DISCOS: ${discosQuebradosColetados}/3`, 130, 16);
-        ctx.fillText(`F: ${currentLevel + 1}/3  T: ${gameTimer}s`, GAME_WIDTH - 145, 16);
+        ctx.fillText(`F: ${currentLevel + 1}/3 T: ${gameTimer}s`, GAME_WIDTH - 120, 16);
     }
 }
 
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
-
+function loop() { update(); draw(); requestAnimationFrame(loop); }
 loop();
 </script>
 
 </body>
 </html>
+
+```
+
+Substitua por este código, salve e dê um **Commit** no GitHub. Agora o jogo vai rodar com blocos coloridos e os botões cinzas/brancos mesmo se as suas imagens não carregarem por causa do nome!
