@@ -1,32 +1,3 @@
-Se a tela continua cinza escuro ou preta e nada do jogo aparece (nem o menu, nem o chão, nem os botões), significa que o navegador travou logo no início porque **não conseguiu encontrar as imagens** na pasta `sprites`. Quando o código tenta carregar uma imagem que não existe ou está com o nome/extensão errados no GitHub, o JavaScript para de rodar na hora.
-
-Vamos resolver isso agora com duas verificações simples:
-
-### 1. Letras Maiúsculas e Minúsculas (O erro mais comum)
-
-No seu computador (Windows), se o arquivo se chamar `FUNDO CLARO.PNG` ou `fundo claro.png`, o computador abre do mesmo jeito. **No GitHub é diferente.** Se estiver uma única letra diferente, o jogo quebra.
-
-Olhe a sua pasta `sprites` dentro do GitHub e veja se os arquivos estão exatamente assim:
-
-* `inicio.PNG` (O `.PNG` precisa ser maiúsculo, igualzinho está na sua pasta)
-* `FUNDO CLARO.PNG` (Tudo maiúsculo)
-* `FUNDO ESCURO.PNG` (Tudo maiúsculo)
-* `esquerda.png` (Minúsculo)
-* `direita.png` (Minúsculo)
-* `pulo.png` (Minúsculo)
-* `personagem.png` (Minúsculo)
-
-> **Dica de ouro:** Se na sua pasta do GitHub o arquivo do botão estiver como `Esquerda.png` (com E maiúsculo) ou `esquerda.PNG` (com PNG maiúsculo), o jogo não vai abrir de jeito nenhum. Deixe o nome do arquivo no GitHub igualzinho ao que está escrito no código.
-
----
-
-### 2. O Código "À Prova de Erros" (Modificado)
-
-Para garantir que o seu jogo **abra e mostre os botões e o cenário mesmo se alguma imagem falhar**, eu reescrevi a parte do carregamento. Agora, se faltar alguma imagem, o jogo não vai mais travar; ele vai abrir o cenário usando cores normais para você conseguir testar e jogar!
-
-Substitua o código do seu `index.html` por este aqui:
-
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -502,7 +473,3 @@ loop();
 
 </body>
 </html>
-
-```
-
-Substitua por este código, salve e dê um **Commit** no GitHub. Agora o jogo vai rodar com blocos coloridos e os botões cinzas/brancos mesmo se as suas imagens não carregarem por causa do nome!
